@@ -1,0 +1,148 @@
+---
+title: "Market Basket Analysis"
+output: html_document
+---
+
+```{r setup,include=FALSE}
+library(knitr)
+opts_chunk$set(out.width='1000px', dpi=200)
+```
+
+In order to carry out a Market Basket Analysis, a data set of transactions is required.  Each transaction represents a group of items or products that have been bought together and often referred to as an "itemset". For example, one itemset might be: {surf excel, domax, lux, sunsilk} in which case all of these items have been bought in a single transaction.
+
+In an MBA, the transactions are analysed to identify rules of association. For example, one rule could be: {surf excel, domax} => {sunsilk}. This means that if a customer has a transaction that contains surf excel and domax, then they are likely to be interested in also buying sunsilk.
+
+
+In order to gain better insights, differentiate Market Basket Analysis based on
+
+* weekend vs weekday sales 
+* month beginning vs month-end sales
+* different seasons of the year
+* different stores
+* different customer profiles
+
+Based on the content and value of the basket, it is useful to classify the trip. Variables such as total basket value, number of items, number of category X vs. category Y items, help in developing rules to map each of the baskets to a previously defined classification. Understanding what kind of shopping trips a customer performs at a particular store at a particular time is critical for planning purposes. The market basket analysis provides a unique window into what is happening at the store and enables advanced applications such as labor scheduling, product readiness and even temporary layout changes.
+
+The analysis can be applied in various ways:
+
+* Develop combo offers based on products sold together
+* Organize and place associated products/categories nearby inside a store
+* Determine the layout of the catalog of an ecommerce site
+* Control inventory based on product demands and what products sell together
+
+
+Before acting on a rule, a retailer needs to know whether there is sufficient evidence to suggest that it will result in a beneficial outcome. We therefore measure the strength of a rule by calculating the following three metrics (note other metrics are available, but these are the three 
+most commonly used):
+
+##Support: 
+The percentage of transactions that contain all of the items in an itemset (e.g., surf excel, domax and sunsilk). The higher the support the more frequently the itemset occurs. Rules with a high support are preferred since they are likely to be applicable to a large number of future transactions.
+
+##Confidence: 
+The probability that a transaction that contains the items on the left hand side of the rule (for example, surf excel and domax) also contains the item on the right hand side (sunsilk). The higher the confidence, the greater the likelihood that the item on the right hand side will be purchased or, in other words, the greater the return rate you can expect for a given rule.
+
+##Lift:
+It is the likeliness that an item B (for e.g. surf excel and lux) will be purchased given the item A (sunsilk) was purchased. For example, if surf excel, lux and sunsilk occurred together in 2.5% of all transactions, surf excel and lux in 10% of transactions and sunsilk in 8% of transactions, then the lift would be: 0.025/(0.1*0.08) = 3.125. A lift of more than 1 suggests that the presence of surf excel and lux increases the probability that sunsilk will also occur in the transaction. Overall, lift summarises the strength of association between the products on the left and right hand side of the rule; the larger the lift the greater the link between the two products.
+
+#Demonstration:
+
+In this example, we've shown a dataset having 9835 transactions and 169 unique items. 
+
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+library(arules)
+groceries <- read.transactions("groceries.csv", sep = ",")
+```
+
+
+
+##Identifying Frequent Items 
+
+The following plot shows the top 15 most frequent items:
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE}
+itemFrequencyPlot(groceries, topN = 15)
+```
+
+It shows that "Whole Milk" was the most frequent item in the transactions.
+
+
+
+##Applying Market Basket Algorithm and Identifying Association Rules
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,results=FALSE,comment=NA,results='hide'}
+set.seed(123)
+library(arulesViz)
+groceryrules <- apriori(groceries, parameter = list(support = 0.001, confidence = 0.5, minlen = 2)) # best would be maximum of support, confidence and lift
+```
+
+The following data shows the rules extracted from the transaction dataset. You can search for a particular item and see its rules. The following data can be interpreted as:
+
+Customers who bought honey are 2.8 times(lift) more likely to buy whole milk with a confidence(probability) of 0.733. The left hand side is a precedent of right hand side. As mentioned earlier, support, confidence and lift help you in identfying the strength and likeliness of the rule (honey->whole milk) taking place.
+
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,results=FALSE,comment=NA}
+library(arulesViz)
+inspectDT(groceryrules)
+```
+
+
+
+The user has the option to see the association rules by confidence, support or lift. The following table shows top 10 rules with maximum confidence. 
+
+##Top 10 rules with Maximum Confidence:
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,cache.comments=FALSE}
+library(arulesViz)
+inspectDT(sort(groceryrules, by = "confidence")[1:10])
+```
+
+
+Interpreting above information: 
+
+Looking at the first rule, customers who buy rice and sugar also buys whole milk. As we have a lift of 3.9, customers buying rice and sugar are approximately 4 times more likely to buy whole milk. Lift summarizes the strength of association between the products on the left and right hand side. Larger the lift, greater the link between two products. 
+A support of 0.0012 gives the percentage of transactions that contain these items (rice,sugar and wholemilk) in the itemset.
+A confidence of 1 is the probability that if a transaction contains rice and sugar on the left hand side, it also contains wholemilk on the right hand side. The higher the confidence, the greater the likelihood that the item on the right hand side will be purchased or, in other words, the greater the return rate you can expect for a given rule.
+
+
+##Identifying Item Wise Rules
+
+We can inspect rules for each item in the dataset. For e.g, If one wants to see the rules for the item, berries, in order to see which products are berries sold with:
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,cache.comments=FALSE}
+library(arulesViz)
+berryrules <- subset(groceryrules, items %in% c("berries"))
+inspectDT(berryrules)
+```
+
+##Graphs of Association Rules:
+
+
+##Graph of Berry Rules
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,fig.width=5}
+plot(berryrules[1:15],method="graph", measure = "lift",shading="confidence",main="Graph of Association Rules")
+```
+
+For e.g, people buying berries and cream cheese are very likely to buy yogurt. Similarly, you can inspect rules for any item present in the dataset. 
+
+
+
+
+##Graph of Top 15 Rules in the Dataset
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,cache.comments=FALSE,fig.width=5}
+library(arulesViz)
+plot(groceryrules[1:15],method="graph", measure = "lift",shading="confidence",main="Graph of Association Rules")
+```
+
+Bigger the size of the circle, higher the lift. Darker the color, higher the confidence. For e.g. People buying curd cheese and rolls/buns are very likely to buy whole milk. Similarly, people buying curd cheese and tropical fruit are likely to buy other vegetables. 
+
+
+##Grouped Matrix of transaction in the dataset
+
+```{r,echo=FALSE,message=FALSE,warning=FALSE,cache.comments=FALSE}
+library(arulesViz)
+plot(groceryrules[1:100], method = "grouped", control = list(k = 10),main="Grouped Matrix")
+```
+
+Darker the color, higher the lift. Bigger the size of the circle, higher the support. From the above graph, we can see that instant food products, whole milk and one other item is very likely to be bought with hamburger meat. The grouped matrix shows the number of aforementioned rules present in the transactions. It gives a bird's eye view on the number of rules present in the transation along with support and lift. The size and color of the balloon can be used to infer the association of items on the left and right hand side.
